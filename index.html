@@ -1140,8 +1140,12 @@
 <script>
 (async function injectExternalCSS () {
   // 1 – list the CSS files you normally <link> to
-  const urls = [
-    'https://unpkg.com/leaflet/dist/leaflet.css'
+    const urls = [
+  'https://unpkg.com/leaflet/dist/leaflet.css',
+  'https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.css',
+  'https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css'
+];
+
     // , 'https://your-cdn/other-library.css'
   ];
 
