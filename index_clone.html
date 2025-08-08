@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <!-- ==== Change this so your browser tab shows the right title ==== -->
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+  <title>Map of SEA founders in the US</title>
+
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+  />
+
+  <style>
+    :root {
+      --main-font: 'Lato', sans-serif;
+    }
+    
+    .leaflet-control-attribution {
+      display: none !important;
+    }
+    /* Compact content layout */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100vh;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--main-font);
+      line-height: 1.4;
+    }
+    h1 {
+      text-align: center;
+      font-family: var(--main-font);
+      margin: 0.25em 0;
+    }
+
+    #map {
+      width: 100%;
+      height: 450px;  /* Fixed height instead of viewport-based */
+      margin: 0;
+      background-color: transparent;
+    }
+
+    /* Modal styles */
+    dialog#detailModal {
+      width: 90%;  /* Increased from 80% to 90% */
+      max-width: 1200px;  /* Increased from 600px to 1200px */
+      border: none;
+      border-radius: 5px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+      padding: 1em;
+      font-family: var(--main-font);
+    }
+
+    /* Mobile-specific modal styles */
+    @media (max-width: 600px) {
+      dialog#detailModal {
+        width: 90vw;
+        height: calc(80vh - 15vh);
+        max-width: none;
+        max-height: none;
+        padding: 3vh 3vw;
+        position: fixed;
+        top: 15vh;
+        left: 50%;
+        right: auto;
+        bottom: 20vh;
+        transform: translateX(-50%);
+        margin: 0;
+        border-radius: 8px;
+      }
+      
+      #modalContent {
+        height: calc(80vh - 15vh - 6vh);
+        max-height: calc(80vh - 15vh - 6vh);
+        overflow: hidden;
+        padding-right: 2vw;
+        padding-left: 2vw;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* Ensure close button is visible and repositioned */
+      button#closeModal {
+        width: auto;
+        height: auto;
+        min-width: 24px;
+        min-height: 24px;
+        right: 5vw;
+        top: 1vh;
+        background: transparent;
+        color: #000;
+        font-size: clamp(16px, 4vw, 20px);
+        border-radius: 0;
+        padding: 0.5vh 1vw;
+      }
+    }
+
+    /* Mobile card layout */
+    .mobile-layout {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+    }
+    
+    .mobile-header {
+      font-weight: normal;
+      text-align: left;
+      flex-shrink: 0;
+      padding: 2vh 0 1vh 0;
+      border-bottom: 1px solid #ccc;
+      flex-shrink: 0;
+      font-size: clamp(14px, 4vw, 18px);
+      line-height: 1.2;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-sizing: border-box;
+    }
+
+    .mobile-header-title {
+      flex: 1;
+      font-size: clamp(14px, 4vw, 18px);
+    }
+
+    .mobile-search-input {
+      width: 25vw;
+      max-width: 90px;
+      padding: 1vh 1vw;
+      font-size: clamp(10px, 2.8vw, 12px);
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: transparent;
+      font-family: var(--main-font);
+      outline: none;
+    }
+
+    .mobile-search-input::placeholder {
+      color: #666;
+      opacity: 0.8;
+    }
+
+    .mobile-search-input:focus {
+      border-color: #3182bd;
+    }
+
+    .no-results-message {
+      text-align: center;
+      color: #666;
+      font-size: clamp(11px, 3vw, 13px);
+      padding: 2vh 1vw;
+      line-height: 1.4;
+    }
+    
+    .mobile-content {
+      flex: 1;
+      height: 80%;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+    
+    .cards-container {
+      height: 100%;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .founder-card {
+      height: 33.333%;
+      padding: 2% 0;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-around;
+      box-sizing: border-box;
+    }
+    
+    .founder-card:not(:last-child) {
+      border-bottom: 1px solid #ccc;
+    }
+    
+    .card-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.5vh;
+      min-height: 0;
+      flex: 1;
+    }
+    
+    .card-left {
+      flex: 1;
+      text-align: left;
+      padding-right: 3vw;
+      padding-left: 1vw;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    
+    .card-right {
+      flex: 1;
+      text-align: right;
+      padding-left: 3vw;
+      padding-right: 1vw;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    
+    .card-label {
+      font-weight: bold;
+      font-size: clamp(9px, 2.5vw, 11px);
+      color: #666;
+      margin-bottom: 0.2vh;
+      line-height: 1.1;
+    }
+    
+    .card-value {
+      font-size: clamp(10px, 2.8vw, 13px);
+      color: #333;
+      word-break: break-word;
+      line-height: 1.2;
+    }
+    
+    .pagination {
+      height: 8%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 4vw;
+      flex-shrink: 0;
+      padding: 1vh 0;
+      border-top: 1px solid #eee;
+      box-sizing: border-box;
+    }
+    
+    .pagination button {
+      padding: 1vh 3vw;
+      border: 1px solid #ccc;
+      background: white;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: clamp(11px, 3vw, 13px);
+      min-width: 15vw;
+      min-height: 4vh;
+      touch-action: manipulation;
+    }
+    
+    .pagination button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .pagination button:hover:not(:disabled) {
+      background: #f0f0f0;
+    }
+    
+    .page-info {
+      font-size: clamp(12px, 3.5vw, 14px);
+      color: #666;
+      min-width: 10vw;
+      text-align: center;
+    }
+
+    /* Additional mobile optimizations for smaller screens */
+    @media (max-width: 450px) {
+      /* iPhone 14 Pro Max specific optimizations */
+      body {
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow-x: hidden;
+      }
+      
+      #map {
+        width: 100vw !important;
+        margin: 0 !important;
+        margin-left: calc(-50vw + 50%) !important;
+        padding: 0 !important;
+        box-sizing: border-box;
+      }
+      
+      .map-footer {
+        width: 100vw;
+        margin-left: calc(-50vw + 50%);
+        padding: 0 8px;
+        box-sizing: border-box;
+      }
+      
+      dialog#detailModal {
+        padding: 2vh 2vw;
+        height: calc(80vh - 15vh);
+        left: 50%;
+        right: auto;
+        bottom: 20vh;
+        transform: translateX(-50%);
+      }
+      
+      #modalContent {
+        height: calc(80vh - 15vh - 4vh);
+        max-height: calc(80vh - 15vh - 4vh);
+        padding-right: 1.5vw;
+        padding-left: 1.5vw;
+      }
+      
+      .mobile-header {
+        height: 12%;
+        padding-top: 5%;
+        padding-bottom: 1.5%;
+        font-size: clamp(13px, 4.2vw, 17px);
+      }
+
+      .mobile-header-title {
+        font-size: clamp(13px, 4.2vw, 17px);
+      }
+
+      .mobile-search-input {
+        width: 20vw;
+        max-width: 80px;
+        padding: 0.8vh 1.5vw;
+        font-size: clamp(9px, 2.5vw, 11px);
+      }
+      
+      .mobile-content {
+        height: 75%;
+      }
+      
+      .founder-card {
+        height: 33.333%;
+        padding: 1.5% 0;
+      }
+      
+      .card-row {
+        margin-bottom: 0.3vh;
+      }
+      
+      .card-label {
+        font-size: clamp(8px, 2.8vw, 10px);
+        margin-bottom: 0.1vh;
+      }
+      
+      .card-value {
+        font-size: clamp(9px, 3vw, 12px);
+      }
+      
+      .pagination {
+        height: 13%;
+        padding-top: 0.5vh;
+      }
+      
+      .pagination button {
+        padding: 1.5vh 3vw;
+        font-size: clamp(10px, 3vw, 13px);
+        min-width: 12vw;
+        min-height: 5vh;
+      }
+      
+      .page-info {
+        font-size: clamp(10px, 3vw, 13px);
+      }
+
+      button#closeModal {
+        width: auto;
+        height: auto;
+        background: transparent;
+        color: #000;
+        font-size: clamp(16px, 4.5vw, 20px);
+        border-radius: 0;
+        padding: 0.5vh 1vw;
+        right: 4vw;
+        top: 0.5vh;
+      }
+
+      /* Additional spacing fixes for small screens */
+      .legend {
+        margin: 0 auto 0 auto;  /* Remove all margins on very small screens for tight spacing */
+        width: 260px;  /* Narrower legend for small screens */
+      }
+    }
+    dialog#detailModal::backdrop {
+      background: rgba(0, 0, 0, 0.4);
+    }
+    #modalContent {
+      max-height: 70vh;
+      overflow-y: auto;
+      margin-top: 0.5em;  /* Reduced from 1em to give more space for content */
+      padding-right: 20px;  /* Add some padding to prevent content from going under button */
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      border: none;
+    }
+    th, td {
+      border: none;
+      padding: 6px 8px;
+      text-align: left;
+      font-size: 14px;  /* Slightly smaller font size */
+      white-space: nowrap;  /* Prevent text wrapping */
+    }
+    th {
+      border-bottom: 1px solid #ccc;
+    }
+    button#closeModal {
+      position: absolute;
+      right: 10px;
+      top: 10px;
+      width: 30px;
+      height: 30px;
+      border: none;
+      background: #f0f0f0;
+      border-radius: 50%;
+      font-size: 16px;
+      cursor: pointer;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    button#closeModal:hover {
+      background: #e0e0e0;
+    }
+
+    .legend {
+      padding: 6px 8px;
+      background: transparent;
+      box-shadow: none;
+      border-radius: 5px;
+      font-family: var(--main-font);
+      margin: 0 auto 0 auto;  /* Minimal margin for compact layout */
+      width: 300px;
+      display: block;
+      position: relative;
+      text-align: center;
+    }
+    .legend-bar {
+      height: 20px;
+      width: 100%;
+      background: linear-gradient(to right, #eff3ff, #bdd7e7, #6baed6, #3182bd, #08519c);  /* Updated color sequence */
+      margin: 5px 0;
+    }
+    .legend-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      margin-top: 2px;
+    }
+    .legend i {
+      width: 18px;
+      height: 18px;
+      float: left;
+      margin-right: 8px;
+      opacity: 0.7;
+    }
+    .legend-title {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    .state-selector {
+      text-align: center;
+      margin: 0.25em 0;  /* Compact margin */
+    }
+    .state-selector select {
+      padding: 0.5em;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      width: 100%;
+      max-width: 300px;
+      margin: 0 auto;
+      display: block;
+    }
+
+    #stateSelect {
+      padding: 8px 12px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      width: 200px;
+      background-color: white;
+      cursor: pointer;
+    }
+
+    #stateSelect:focus {
+      outline: none;
+      border-color: black;
+    }
+
+    /* Desktop modal header and search styles */
+    .desktop-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1em;
+    }
+
+    .desktop-search-input {
+      width: 200px;
+      padding: 8px 12px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: transparent;
+      font-family: var(--main-font);
+      outline: none;
+    }
+
+    .desktop-search-input::placeholder {
+      color: #666;
+      opacity: 0.8;
+    }
+
+    .desktop-search-input:focus {
+      border-color: #3182bd;
+    }
+
+    .no-results-desktop {
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+      padding: 20px;
+      font-style: italic;
+    }
+
+    /* Map footer elements */
+    .map-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 0.25em 0;
+      padding: 0 8px;
+    }
+
+    .source-attribution {
+      font-family: var(--main-font);
+      font-size: 12px;
+      color: #666;
+      text-align: left;
+    }
+
+    .watermark-image {
+      height: 20px;
+      width: auto;
+    }
+
+    /* Mobile responsiveness for map footer */
+    @media (max-width: 600px) {
+      body {
+        overflow-x: hidden; /* Prevent horizontal scroll */
+      }
+      
+      .map-footer {
+        align-items: right;
+        gap: 0.25em;
+        width: 100vw;   /* Match map width */
+        margin-left: calc(-50vw + 50%); /* Align with map */
+        padding: 0 8px; /* Add padding for content spacing */
+        box-sizing: border-box;
+      }
+      
+      .source-attribution {
+        text-align: left;
+      }
+      
+      #map {
+        height: 350px;  /* Slightly smaller on mobile */
+        width: 100vw;   /* Use viewport width for true full-width */
+        margin: 0;
+        margin-left: calc(-50vw + 50%); /* Break out of container constraints */
+        position: relative;
+      }
+
+      .legend {
+        margin: 0 auto 0 auto;  /* Remove top and bottom margins completely on mobile */
+        width: 280px;  /* Slightly narrower on mobile */
+      }
+    }
+  </style>
+</head>
+<body>
+    <h2 style="text-align: center; font-family: var(--main-font); margin: 0.5em 0 0.25em 0;">
+    Map of SEA founders in the US
+    </h2>
+    <h4 style="text-align: center; font-family: var(--main-font); font-weight: normal; margin: 0.25em 0;">
+    Select a state from dropdown menu or click on the map see details list
+    </h4>
+
+    <div class="state-selector">
+      <select id="stateSelect" aria-label="Select a state">
+        <option value="">Select a state</option>
+      </select>
+    </div>
+
+  <div class="legend" id="legend"></div>
+  <div id="map"></div>
+  
+  <div class="map-footer">
+    <div class="source-attribution">Source: Tech in Asia research, Overseas Vietnamese, Thai Duong - Founder of Calif, Long Nguyen - Founder of Everfit</div>
+    <img src="https://public.flourish.studio/uploads/654906/b7663fa8-c232-432e-838d-274566bd6992.png" alt="Watermark" class="watermark-image">
+  </div>
+
+  <dialog id="detailModal">
+    <button id="closeModal">✕</button>  <!-- Changed from "Close" to "✕" -->
+    <div id="modalContent"></div>
+  </dialog>
+
+  <!-- Libraries -->
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <script src="https://d3js.org/d3.v6.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+
+  <script>
+    // Function to determine optimal zoom level and center for different screen sizes
+    function getOptimalMapView() {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      
+      // For very small mobile devices (iPhone SE, small Android phones)
+      if (width <= 375) {
+        return {
+          center: [37.8, -96],
+          zoom: 2.8
+        };
+      }
+      // For standard mobile devices (iPhone 14, most modern phones)
+      else if (width <= 430) {
+        return {
+          center: [37.8, -96],
+          zoom: 3.0
+        };
+      }
+      // For larger mobile devices and small tablets
+      else if (width <= 600) {
+        return {
+          center: [37.8, -96],
+          zoom: 3.2
+        };
+      }
+      // For tablets
+      else if (width <= 768) {
+        return {
+          center: [37.8, -96],
+          zoom: 3.5
+        };
+      }
+      // For desktop and larger screens
+      else {
+        return {
+          center: [37.8, -96],
+          zoom: 4
+        };
+      }
+    }
+
+    // 1. Initialize map with responsive zoom
+    const mapView = getOptimalMapView();
+    const map = L.map("map", {
+      zoomControl: true,
+      dragging: false,
+      scrollWheelZoom: false,
+      doubleClickZoom: false,
+      boxZoom: false,
+      keyboard: false
+    }).setView(mapView.center, mapView.zoom);
+    map.zoomControl.setPosition("bottomright");
+      
+
+    // lock bounds to contiguous US
+    map.setMaxBounds([[20, -140], [55, -50]]);
+
+    // 2. Load and group CSV
+    const stateData = {};
+    Papa.parse("https://docs.google.com/spreadsheets/d/e/2PACX-1vRSzWOs1JqYD8zPv4JbMHtVaOiKUVKT1WoRAhgEozC5SLDw6iw8zzbfEwFGl4ETSQ9PN2IIe38xgC9g/pub?gid=1392287358&single=true&output=csv", {
+      download: true,
+      header: true,
+      complete: ({ data }) => {
+        console.log("First row of data:", data[0]); // Add this line
+        console.log("Column names:", Object.keys(data[0])); // Add this line
+        data.forEach(d => {
+          const st = d.com_state;
+          if (!stateData[st]) stateData[st] = [];
+          stateData[st].push(d);
+        });
+        drawMap();
+      },
+      error: err => {
+        console.error("❌ CSV load error:", err);
+        alert("CSV load error: " + err.message);
+      }
+    });
+
+    function createLegend(breaks, palette) {
+      const legend = document.getElementById('legend');
+      let html = '<div class="legend-title">Number of founders</div>';
+      
+      // Add the gradient bar
+      html += '<div class="legend-bar"></div>';
+      
+      // Add labels
+      html += '<div class="legend-labels">';
+      html += `<span>1</span>
+              <span>10</span>
+              <span>20</span>
+              <span>30</span>
+              <span>40</span>
+              <span>50</span>`;
+      html += '</div>';
+      
+      legend.innerHTML = html;
+    }
+
+    function drawMap() {
+      // 3. Compute equal‑interval breaks
+      const counts = Object.values(stateData).map(a => a.length);
+      counts.push(0);
+      const maxC = d3.max(counts), minC = d3.min(counts);
+      const interval = (maxC - minC) / 5;
+      const breaks = d3.range(1,6).map(i => minC + i * interval);
+      // Replace d3.schemeBlues with custom palette
+      const palette = ['#eff3ff', '#bdd7e7', '#6baed6', '#3182bd', '#08519c'];
+      
+      createLegend(breaks, palette); // Add this line after defining breaks and palette
+
+      function getColor(c) {
+        for (let i = 0; i < breaks.length; i++) {
+          if (c <= breaks[i]) return palette[i];
+        }
+        return palette[4];
+      }
+
+      // 4. Fetch GeoJSON via jsDelivr
+      const GEOJSON_URL = 
+        "https://cdn.jsdelivr.net/gh/PublicaMundi/MappingAPI@master/data/geojson/us-states.json";
+
+      fetch(GEOJSON_URL)
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json();
+        })
+        .then(geojson => {
+          console.log("✅ GeoJSON loaded:", geojson.features.length, "features");
+          L.geoJson(geojson, {
+            filter: f => 
+            !["Alaska", "Hawaii", "Puerto Rico"].includes(f.properties.name),
+            style: feat => {
+              const name = feat.properties.name;
+              const c = (stateData[name] || []).length;
+              return {
+                color: "#fff",
+                weight: 1,
+                fillOpacity: 1,
+                fillColor: c > 0 ? getColor(c) : "#f0f0f0"  // Change #e5f5f9 to any color you want
+              };
+            },
+            onEachFeature: (feat, layer) => {
+              const name = feat.properties.name;
+              const c = (stateData[name] || []).length;
+              const tip = c > 0
+                ? `<b>${name}</b>: ${c} founders<br>Click to see details`
+                : `<b>${name}</b>: N/A`;
+
+              layer.on("mouseover", e => {
+                layer.bindTooltip(tip, { sticky: true }).openTooltip(e.latlng);
+              });
+              layer.on("mouseout", () => layer.closeTooltip());
+
+              if (c > 0) {
+                const el = layer.getElement && layer.getElement();
+                if (el) el.style.cursor = "pointer";
+                layer.on("click", () => showModal(name));
+              }
+            }
+          }).addTo(map);
+
+          // Add this in your drawMap function, after the L.geoJson initialization
+          function populateStateDropdown(geojson) {
+            const select = document.getElementById('stateSelect');
+            
+            // Create array of state objects with their founder counts - only include states with founders
+            const states = geojson.features
+              .filter(f => !["Alaska", "Hawaii", "Puerto Rico"].includes(f.properties.name))
+              .map(f => {
+                const name = f.properties.name;
+                const count = (stateData[name] || []).length;
+                return {
+                  name: name,
+                  count: count,
+                  display: `${name}: ${count} founders`
+                };
+              })
+              // Filter to only include states with founders (count > 0)
+              .filter(state => state.count > 0)
+              // Sort by count in descending order
+              .sort((a, b) => b.count - a.count);
+
+            // Clear existing options except the placeholder
+            select.innerHTML = '<option value="">Select a state</option>';
+
+            // Add state options
+            states.forEach(state => {
+              const option = document.createElement('option');
+              option.value = state.name;
+              option.textContent = state.display;
+              select.appendChild(option);
+            });
+
+            // Keep existing event listener
+            select.addEventListener('change', (e) => {
+              const selectedState = e.target.value;
+              if (selectedState && stateData[selectedState]?.length > 0) {
+                showModal(selectedState);
+                // Reset dropdown after selection
+                resetDropdown();
+              }
+            });
+          }
+
+          function resetDropdown() {
+            const select = document.getElementById('stateSelect');
+            if (select) {
+              select.value = '';
+            }
+          }
+
+          // Add this line in your .then() block after creating the L.geoJson layer
+          populateStateDropdown(geojson);
+        })
+        .catch(err => {
+          console.error("❌ GeoJSON load error:", err);
+          alert("Map data error:\n" + err.message);
+        });
+    }
+
+    // 5. Modal logic - Keep only this one showModal function
+    const modal = document.getElementById("detailModal");
+    const content = document.getElementById("modalContent");
+    document.getElementById("closeModal").onclick = () => {
+      modal.close();
+      resetDropdown();
+    };
+
+    let currentPage = 1;
+    let foundersPerPage = 3;
+    let currentFounders = [];
+    let filteredFounders = [];
+    let currentSearchTerm = '';
+    let desktopSearchTerm = '';
+    let desktopFilteredFounders = [];
+
+    function resetDropdown() {
+      const select = document.getElementById('stateSelect');
+      if (select) {
+        select.value = '';
+      }
+    }
+
+    function isMobile() {
+      return window.innerWidth < 600;
+    }
+
+    function searchFounders(searchTerm, founders) {
+      if (!searchTerm.trim()) {
+        return founders;
+      }
+      
+      const term = searchTerm.toLowerCase();
+      return founders.filter(founder => {
+        return (
+          founder.founder.toLowerCase().includes(term) ||
+          founder.company.toLowerCase().includes(term) ||
+          founder.com_city.toLowerCase().includes(term) ||
+          founder.com_year.toString().includes(term) ||
+          founder.com_industry.toLowerCase().includes(term) ||
+          founder.origin.toLowerCase().includes(term)
+        );
+      });
+    }
+
+    function handleDesktopSearch(searchTerm, state) {
+      desktopSearchTerm = searchTerm;
+      desktopFilteredFounders = searchFounders(searchTerm, currentFounders);
+      renderDesktopTable(state, desktopFilteredFounders);
+    }
+
+    function renderDesktopTable(state, foundersToShow) {
+      const tableContainer = document.getElementById('desktop-table-container');
+      if (!tableContainer) return;
+
+      if (foundersToShow.length === 0) {
+        tableContainer.innerHTML = `
+          <div class="no-results-desktop">
+            Please try again with exact name of founder, company, year founded, industry or country of origin
+          </div>
+        `;
+        return;
+      }
+
+      let html = `<table>
+        <thead><tr>
+          <th>Founder</th>
+          <th>City</th>
+          <th>Company</th>
+          <th>Founded Year</th>
+          <th>Industry</th>
+          <th>Country of Origin</th>
+        </tr></thead><tbody>`;
+      
+      foundersToShow.forEach(d => {
+        // Convert Markdown links for founder and company
+        let founderHtml = d.founder.replace(
+          /\[([^\]]+)\]\(([^)]+)\)/g,
+          '<a href="$2" target="_blank">$1</a>'
+        );
+        let companyHtml = d.company.replace(
+          /\[([^\]]+)\]\(([^)]+)\)/g,
+          '<a href="$2" target="_blank">$1</a>'
+        );
+
+        html += `
+          <tr>
+            <td>${founderHtml}</td>
+            <td>${d.com_city}</td>
+            <td>${companyHtml}</td>
+            <td>${d.com_year}</td>
+            <td>${d.com_industry}</td>
+            <td>${d.origin}</td>
+          </tr>`;
+      });
+      html += `</tbody></table>`;
+      tableContainer.innerHTML = html;
+    }
+
+    function renderMobileCards(state, foundersToShow) {
+      const totalPages = Math.ceil(foundersToShow.length / foundersPerPage);
+      const startIndex = (currentPage - 1) * foundersPerPage;
+      const endIndex = startIndex + foundersPerPage;
+      const currentPageFounders = foundersToShow.slice(startIndex, endIndex);
+
+      // Update header title count with proper formatting
+      const headerTitle = document.querySelector('.mobile-header-title');
+      if (headerTitle) {
+        headerTitle.innerHTML = `<strong>${state}:</strong> ${foundersToShow.length} SEA founders`;
+      }
+
+      // Generate cards HTML
+      let cardsHtml = '';
+      currentPageFounders.forEach((d, index) => {
+        // Convert Markdown links for founder and company
+        let founderHtml = d.founder.replace(
+          /\[([^\]]+)\]\(([^)]+)\)/g,
+          '<a href="$2" target="_blank">$1</a>'
+        );
+        let companyHtml = d.company.replace(
+          /\[([^\]]+)\]\(([^)]+)\)/g,
+          '<a href="$2" target="_blank">$1</a>'
+        );
+
+        cardsHtml += `<div class="founder-card">
+          <div class="card-row">
+            <div class="card-left">
+              <div class="card-label">Founder</div>
+              <div class="card-value">${founderHtml}</div>
+            </div>
+            <div class="card-right">
+              <div class="card-label">City</div>
+              <div class="card-value">${d.com_city}</div>
+            </div>
+          </div>
+          <div class="card-row">
+            <div class="card-left">
+              <div class="card-label">Company</div>
+              <div class="card-value">${companyHtml}</div>
+            </div>
+            <div class="card-right">
+              <div class="card-label">Year Founded</div>
+              <div class="card-value">${d.com_year}</div>
+            </div>
+          </div>
+          <div class="card-row">
+            <div class="card-left">
+              <div class="card-label">Industry</div>
+              <div class="card-value">${d.com_industry}</div>
+            </div>
+            <div class="card-right">
+              <div class="card-label">Country of Origin</div>
+              <div class="card-value">${d.origin}</div>
+            </div>
+          </div>
+        </div>`;
+      });
+
+      // Update cards container
+      const cardsContainer = document.querySelector('.cards-container');
+      if (cardsContainer) {
+        cardsContainer.innerHTML = cardsHtml;
+      }
+
+      // Update pagination
+      const existingPagination = document.querySelector('.pagination');
+      if (existingPagination) {
+        existingPagination.remove();
+      }
+
+      if (totalPages > 1) {
+        const mobileContent = document.querySelector('.mobile-content');
+        const paginationHtml = `<div class="pagination">
+          <button onclick="changePage(-1)" ${currentPage === 1 ? 'disabled' : ''}>Back</button>
+          <span class="page-info">${currentPage}/${totalPages}</span>
+          <button onclick="changePage(1)" ${currentPage === totalPages ? 'disabled' : ''}>Next</button>
+        </div>`;
+        
+        if (mobileContent) {
+          mobileContent.insertAdjacentHTML('beforeend', paginationHtml);
+        }
+      }
+    }
+
+    function isMobile() {
+      return window.innerWidth < 600;
+    }
+
+    function showModal(state) {
+      const list = stateData[state] || [];
+      currentFounders = list;
+      currentPage = 1;
+      
+      // Reset search states when opening a new modal
+      currentSearchTerm = '';
+      desktopSearchTerm = '';
+      filteredFounders = list;
+      desktopFilteredFounders = list;
+      
+      if (isMobile()) {
+        showMobileModal(state, list);
+      } else {
+        showDesktopModal(state, list);
+      }
+    }
+
+    function showDesktopModal(state, list) {
+      // Reset desktop search state
+      currentFounders = list;
+      desktopSearchTerm = '';
+      desktopFilteredFounders = list;
+      
+      // Create header with search input
+      let html = `<div class="desktop-modal-header">
+        <h3>${state}: ${list.length} SEA founders</h3>
+        <input type="text" class="desktop-search-input" placeholder="Search" 
+               oninput="handleDesktopSearch(this.value, '${state}')" value="">
+      </div>`;
+      
+      // Add table container
+      html += `<div id="desktop-table-container"></div>`;
+      
+      content.innerHTML = html;
+      modal.showModal();
+      
+      // Populate the table with initial data
+      renderDesktopTable(state, desktopFilteredFounders);
+    }
+
+    function showMobileModal(state, list) {
+      // Set global variables for current data
+      currentFounders = list;
+      filteredFounders = list; // Initialize with all founders
+      currentPage = 1; // Reset page when opening modal
+      currentSearchTerm = ''; // Reset search term
+      
+      // Create the initial modal structure (only once)
+      let html = `<div class="mobile-layout">`;
+      html += `<div class="mobile-header">
+        <div class="mobile-header-title"><strong>${state}:</strong> ${list.length} SEA founders</div>
+        <input type="text" class="mobile-search-input" placeholder="Search..." value="" 
+               oninput="handleSearchInput(this.value, '${state}')">
+      </div>`;
+      html += `<div class="mobile-content">`;
+      html += `<div class="cards-container">`;
+      html += `</div>`; // close cards-container - will be populated by renderMobileCards
+      html += `</div>`; // close mobile-content
+      html += `</div>`; // close mobile-layout
+      
+      content.innerHTML = html;
+      modal.showModal();
+      
+      // Now populate the dynamic content
+      renderMobileCards(state, filteredFounders);
+    }
+
+    function handleSearchInput(searchTerm, state) {
+      currentSearchTerm = searchTerm;
+      filteredFounders = searchFounders(searchTerm, currentFounders);
+      currentPage = 1; // Reset to first page when searching
+      
+      // Only update the dynamic content, not the entire modal
+      renderMobileCards(state, filteredFounders);
+    }
+
+    function changePage(direction) {
+      const totalPages = Math.ceil(filteredFounders.length / foundersPerPage);
+      const newPage = currentPage + direction;
+      
+      if (newPage >= 1 && newPage <= totalPages) {
+        currentPage = newPage;
+        // Get current state name from the modal header
+        const headerElement = document.querySelector('.mobile-header-title');
+        const stateName = headerElement ? headerElement.textContent.split(':')[0] : 'Unknown';
+        
+        // Only update the dynamic content, not the entire modal
+        renderMobileCards(stateName, filteredFounders);
+      }
+    }
+
+    // Debounced resize handler for better performance
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        // Update map view for new screen size
+        const newMapView = getOptimalMapView();
+        map.setView(newMapView.center, newMapView.zoom);
+        
+        // Refresh modal if it's currently open and screen size changes
+        if (modal.open) {
+          const state = Object.keys(stateData).find(key => stateData[key] === currentFounders);
+          if (state) {
+            showModal(state);
+          }
+        }
+      }, 250); // 250ms delay to avoid excessive updates
+    });
+
+    // ADD THE NEW CODE HERE - Parent iframe communication
+    function notifyParentOfSize() {
+      const height = Math.max(
+        document.body.scrollHeight,
+        document.body.offsetHeight,
+        document.documentElement.clientHeight,
+        document.documentElement.scrollHeight,
+        document.documentElement.offsetHeight
+      );
+      
+      // Send resize message to parent
+      if (window.parent !== window) {
+        window.parent.postMessage({
+          type: 'resize',
+          height: height
+        }, '*');
+      }
+    }
+
+    // Call on load and when content changes
+    window.addEventListener('load', notifyParentOfSize);
+    window.addEventListener('resize', notifyParentOfSize);
+
+    // Call when modal opens/closes (since it changes content height)
+    const originalShowModal = showModal;
+    window.showModal = function(state) {
+      originalShowModal(state);
+      setTimeout(notifyParentOfSize, 100); // Small delay to ensure modal is rendered
+    };
+
+    modal.addEventListener('close', () => {
+      resetDropdown();
+      setTimeout(notifyParentOfSize, 100); // Notify parent when modal closes
+    });
+
+    // END OF NEW CODE
+  </script>
+  <script>
+  // === auto-send the page’s current height to the parent ===
+  function sendHeight () {
+    const h = document.documentElement.scrollHeight;
+    parent.postMessage({ embedId: 'sea-founders-map', height: h }, '*');
+  }
+
+  // initial + on resize
+  window.addEventListener('load', sendHeight);
+  window.addEventListener('resize', sendHeight);
+
+  // keep watching in case Leaflet changes size after data loads
+  new ResizeObserver(sendHeight).observe(document.body);
+</script>
+</body>
+</html>
